@@ -20,14 +20,14 @@ Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
 EOF
 apt-get update
 arch=$(dpkg --print-architecture)
-apt-get install -y "linux-headers-$arch" build-essential dkms mokutil pciutils \
+apt-get install -y "linux-image-$arch" "linux-headers-$arch" build-essential dkms mokutil pciutils \
     firmware-linux-free firmware-misc-nonfree firmware-amd-graphics firmware-intel-graphics \
     mesa-vulkan-drivers mesa-opencl-icd libgl1-mesa-dri ocl-icd-libopencl1 clinfo vulkan-tools
 report=/var/log/elektro-gpu-packages.log
 : >"$report"
 # Install every available userspace stack in our vendor matrix, even before a GPU is added.
 # Package availability differs by CPU architecture; record each absence explicitly.
-for package in intel-opencl-icd libze-intel-gpu1 intel-media-va-driver-non-free \
+for package in intel-opencl-icd libze1 libze-intel-gpu1 intel-media-va-driver-non-free \
     rocm-opencl-icd rocminfo libhsa-runtime64-1 libamdhip64-5 firmware-nvidia-graphics; do
     if apt-cache policy "$package" | awk '/Candidate:/ {found=($2 != "(none)")} END {exit !found}'; then
         apt-get install -y "$package"

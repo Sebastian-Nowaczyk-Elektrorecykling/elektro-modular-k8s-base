@@ -7,7 +7,11 @@ apt_prepare
 apt-get install -y age dnsutils shellcheck make openssh-client python3-venv
 # configure.py can now run on a fresh Debian workstation.
 site=${1:-$REPO_ROOT/config/site.yaml}
-python3 "$REPO_ROOT/scripts/configure.py" "$site"
+if [[ -n ${SUDO_USER:-} && $SUDO_USER != root ]]; then
+    sudo -u "$SUDO_USER" python3 "$REPO_ROOT/scripts/configure.py" "$site"
+else
+    python3 "$REPO_ROOT/scripts/configure.py" "$site"
+fi
 load_site
 arch=$(dpkg --print-architecture)
 tmpdir=$(mktemp -d)
