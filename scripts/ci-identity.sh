@@ -37,10 +37,12 @@ done
 [[ $ready == true ]] || { printf 'authentik did not become ready\n' >&2; exit 1; }
 ready=false
 for _ in $(seq 1 30); do
-    if docker exec -i ci-worker ak shell -c 'exec(__import__("sys").stdin.read())' <scripts/identity-bootstrap.py >.local/ci-identity.out 2>.local/ci-identity.err; then ready=true; break; fi
+    if docker exec ci-worker ak shell -c 'from authentik.core.models import Application; from authentik.flows.models import Flow; from authentik.crypto.models import CertificateKeyPair; assert Application.objects.filter(slug__in=["longhorn","hubble"]).count()==2; assert Flow.objects.filter(slug="default-provider-authorization-explicit-consent").exists(); assert CertificateKeyPair.objects.filter(name="authentik Self-signed Certificate").exists()' >.local/ci-ready.out 2>.local/ci-ready.err; then ready=true; break; fi
     sleep 3
 done
-[[ $ready == true ]] || { cat .local/ci-identity.err >&2; exit 1; }
+[[ $ready == true ]] || { cat .local/ci-ready.err >&2; exit 1; }
+# Retry readiness only; configuration errors must fail immediately and visibly.
+docker exec -i ci-worker ak shell -c 'exec(__import__("sys").stdin.read())' <scripts/identity-bootstrap.py >.local/ci-identity.out
 docker exec -i ci-worker ak shell -c 'exec(__import__("sys").stdin.read())' <tests/identity_fixture.py >.local/ci-fixture.out
 docker run -d --name ci-fga -p 127.0.0.1:18080:8080 openfga/openfga:v1.20.0 run --datastore-engine memory --playground-enabled=false >/dev/null
 python3 tests/live_identity.py

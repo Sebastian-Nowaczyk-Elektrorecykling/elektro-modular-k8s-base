@@ -6,7 +6,7 @@ from authentik.crypto.models import CertificateKeyPair
 from authentik.flows.models import Flow
 from authentik.policies.models import PolicyBinding
 from authentik.policies.expression.models import ExpressionPolicy
-from authentik.providers.oauth2.models import OAuth2Provider, ScopeMapping
+from authentik.providers.oauth2.models import OAuth2Provider, ScopeMapping, RedirectURI, RedirectURIMatchingMode
 
 authorize=Flow.objects.get(slug='default-provider-authorization-explicit-consent')
 invalidate=Flow.objects.get(slug='default-provider-invalidation-flow')
@@ -27,8 +27,8 @@ for slug,client_type in [('inventory','confidential'),('inventory-cli','public')
     defaults=dict(authorization_flow=authorize,invalidation_flow=invalidate,client_type=client_type,
         sub_mode='user_uuid',issuer_mode='per_provider',signing_key=signing_key,
         access_token_validity='minutes=5',include_claims_in_id_token=True,
-        redirect_uris=[{'matching_mode':'strict','url':'http://localhost:8765/callback'}],
-        allowed_grant_types=['authorization_code'] if client_type=='public' else
+        redirect_uris=[RedirectURI(RedirectURIMatchingMode.STRICT,'http://localhost:8765/callback')],
+        grant_types=['authorization_code'] if client_type=='public' else
             ['authorization_code','client_credentials','urn:ietf:params:oauth:grant-type:token-exchange'])
     provider,created=OAuth2Provider.objects.get_or_create(name=slug,defaults=defaults|{'client_id':slug,'client_secret':secrets.token_urlsafe(48)})
     if not created:
