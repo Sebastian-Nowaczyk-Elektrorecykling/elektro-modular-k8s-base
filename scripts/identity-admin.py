@@ -36,14 +36,21 @@ elif cmd in ('grant','revoke'):
 elif cmd=='actor':
     if User.objects.filter(username=REQUEST['name']).exists(): raise ValueError('Identity already exists; no token rotation is implicit')
     parent=User.objects.get(username=REQUEST['parent']) if REQUEST['parent'] else None
-    actor=Actor.objects.create(username=REQUEST['name'],name=REQUEST['name'],parent=parent,
-        policy_behavior='none',type=UserTypes.SERVICE_ACCOUNT,is_active=True,
-        expiring=True,expires=timezone.now()+timedelta(days=REQUEST['days']))
+    expires=timezone.now()+timedelta(days=REQUEST['days'])
+    if parent:
+        actor=Actor.objects.create(username=REQUEST['name'],name=REQUEST['name'],parent=parent,
+            policy_behavior='none',type=UserTypes.SERVICE_ACCOUNT,is_active=True,
+            expiring=True,expires=expires)
+    else:
+        # 2026.8.2's audit serializer dereferences Actor.parent unconditionally.
+        # An autonomous identity uses the supported ordinary service-account model.
+        actor=User.objects.create(username=REQUEST['name'],name=REQUEST['name'],
+            type=UserTypes.SERVICE_ACCOUNT,is_active=True)
     actor.set_unusable_password();actor.save()
     token=Token.objects.create(identifier='elektro-'+REQUEST['name'],user=actor,key=secrets.token_urlsafe(48),
-        intent=TokenIntents.INTENT_APP_PASSWORD,expiring=True,expires=actor.expires)
+        intent=TokenIntents.INTENT_APP_PASSWORD,expiring=True,expires=expires)
     result={'username':actor.username,'uuid':str(actor.uuid),'parent':str(parent.uuid) if parent else None,
-            'app_password':token.key,'expires':str(actor.expires)}
+            'app_password':token.key,'expires':str(expires)}
 print('ELEKTRO_RESULT='+json.dumps(result,default=str))
 '''
 out=subprocess.run(['kubectl','-n','identity','exec','-i','deployment/authentik-worker','--','ak','shell','-c',

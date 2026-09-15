@@ -13,7 +13,7 @@ The checked-in network addresses are examples. Configure your site before runnin
 | LAN DNS | Separate CoreDNS resolver, TCP and UDP port 53, configurable upstreams |
 | Private TLS | A locally generated CA and cert-manager certificates |
 | Human sign-in | authentik; independent grants for each dashboard and API |
-| Agents | Expiring authentik Actors, autonomous credentials, explicit on-behalf-of token exchange |
+| Agents | Autonomous service accounts, parent-bound Actors, expiring credentials and explicit on-behalf-of token exchange |
 | Authorization | OpenFGA service/delegation model, check-only application endpoint, working API example |
 | Future public domain | Separate opt-in Gateway and certificate, restricted namespace attachment |
 

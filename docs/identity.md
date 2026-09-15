@@ -46,7 +46,7 @@ The public CLI uses authorization code plus S256 PKCE, state validation and an e
 
 ## Autonomous agents
 
-Create an expiring Actor without a parent, then independently grant it the service:
+Create a service account with an expiring credential, then independently grant it the service:
 
 ```bash
 python3 scripts/identity-admin.py actor indexer --days 30
@@ -56,7 +56,9 @@ python3 scripts/agent-token.py .local/actor-indexer.json --output .local/indexer
 python3 scripts/call-api.py .local/indexer.access
 ```
 
-Each actor gets its own app-password credential; tokens last five minutes. The credential is written to a private local JSON file. Move it into the agent's secret store, never a container image, source repository or command-line argument. Rotate/revoke that credential in authentik and remove its FGA grants when retiring the agent. Expiration does not remove old FGA tuples automatically; clean those up too.
+Each agent gets its own app-password credential; access tokens last five minutes. The credential is written to a private local JSON file. Move it into the agent's secret store, never a container image, source repository or command-line argument. Rotate/revoke that credential in authentik and remove its FGA grants when retiring the agent. Credential expiration does not delete the service account or old FGA tuples; clean those up too.
+
+The `actor` command without `--parent` deliberately creates a standard service account. Live testing exposed an authentik 2026.8.2 audit-serialization error for parentless Actor objects: [the pinned event serializer](https://github.com/goauthentik/authentik/blob/version/2026.8.2/authentik/events/utils.py) dereferences their missing parent. Parent-bound Actors implement delegation; ordinary service accounts implement autonomous operation. Both have unusable interactive passwords, individually expiring app-password credentials, and independent service grants. An autonomous service account can be the parent of a delegated Actor.
 
 ## An agent acting for a user
 

@@ -6,9 +6,9 @@ from authentik.core.models import Actor,User,Group,Token,TokenIntents,UserTypes,
 from authentik.policies.models import PolicyBinding
 
 user=User.objects.create(username='ci-user',name='CI user',is_active=True)
-actors=[Actor.objects.create(username=name,name=name,parent=parent,policy_behavior='none',
-    type=UserTypes.SERVICE_ACCOUNT,is_active=True,expiring=True,expires=timezone.now()+timedelta(hours=1))
-    for name,parent in [('ci-agent',user),('ci-independent',None)]]
+actors=[Actor.objects.create(username='ci-agent',name='CI agent',parent=user,policy_behavior='none',
+    type=UserTypes.SERVICE_ACCOUNT,is_active=True,expiring=True,expires=timezone.now()+timedelta(hours=1)),
+    User.objects.create(username='ci-independent',name='CI independent',type=UserTypes.SERVICE_ACCOUNT,is_active=True)]
 child=Actor.objects.create(username='ci-child',name='CI child',parent=actors[0],policy_behavior='none',
     type=UserTypes.SERVICE_ACCOUNT,is_active=True,expiring=True,expires=timezone.now()+timedelta(hours=1))
 result={}
