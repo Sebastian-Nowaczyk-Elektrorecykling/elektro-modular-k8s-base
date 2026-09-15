@@ -1,0 +1,103 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: lan-dns
+  namespace: networking
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: lan-dns
+  template:
+    metadata:
+      labels:
+        app: lan-dns
+    spec:
+      nodeSelector:
+        elektro.internal/gateway: 'true'
+      tolerations:
+      - key: node-role.kubernetes.io/control-plane
+        operator: Exists
+        effect: NoSchedule
+      containers:
+      - name: coredns
+        image: coredns/coredns:1.14.7
+        args:
+        - -conf
+        - /etc/coredns/Corefile
+        ports:
+        - name: dns-udp
+          containerPort: 53
+          protocol: UDP
+        - name: dns-tcp
+          containerPort: 53
+          protocol: TCP
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            memory: 256Mi
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8181
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+        volumeMounts:
+        - name: config
+          mountPath: /etc/coredns
+          readOnly: true
+      volumes:
+      - name: config
+        configMap:
+          name: lan-dns
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: lan-dns
+  namespace: networking
+  labels:
+    elektro.internal/exposure: lan
+  annotations:
+    io.cilium/lb-ipam-ips: ${DNS_ADDRESS}
+spec:
+  type: LoadBalancer
+  externalTrafficPolicy: Cluster
+  selector:
+    app: lan-dns
+  ports:
+  - name: dns-udp
+    port: 53
+    targetPort: 53
+    protocol: UDP
+  - name: dns-tcp
+    port: 53
+    targetPort: 53
+    protocol: TCP
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: lan-dns-ingress
+  namespace: networking
+spec:
+  podSelector:
+    matchLabels:
+      app: lan-dns
+  policyTypes:
+  - Ingress
+  ingress:
+  - ports:
+    - port: 53
+      protocol: UDP
+    - port: 53
+      protocol: TCP
+    from:
+    - ipBlock:
+        cidr: ${LAN_CIDR}
+    - ipBlock:
+        cidr: ${POD_CIDR}

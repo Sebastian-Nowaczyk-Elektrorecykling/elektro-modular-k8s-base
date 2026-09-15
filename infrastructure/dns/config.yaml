@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: lan-dns
+  namespace: networking
+data:
+  Corefile: "internal:53 {\n    errors\n    cache 30\n    hosts /etc/coredns/nodes.hosts\
+    \ {\n        ttl 30\n        fallthrough\n    }\n    template IN A {\n       \
+    \ match ^.*[.]?internal[.]$\n        answer \"{{ .Name }} 30 IN A ${GATEWAY_ADDRESS}\"\
+    \n    }\n    template IN AAAA {\n        rcode NOERROR\n    }\n    template ANY\
+    \ ANY {\n        rcode NXDOMAIN\n    }\n}\n.:53 {\n    errors\n    health :8080\n\
+    \    ready :8181\n    cache 30\n    loop\n    reload 10s\n    forward . ${DNS_UPSTREAMS}\
+    \ {\n        policy sequential\n        health_check 5s\n    }\n}\n"
+  nodes.hosts: '${API_ADDRESS} api.admin.internal
+
+    ${DNS_ADDRESS} dns.admin.internal
+
+    192.168.10.11 control-1.internal
+
+    '

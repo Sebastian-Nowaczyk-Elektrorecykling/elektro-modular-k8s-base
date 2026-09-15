@@ -1,0 +1,27 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: external
+  namespace: networking
+spec:
+  gatewayClassName: cilium
+  infrastructure:
+    labels:
+      elektro.internal/exposure: lan
+    annotations:
+      io.cilium/lb-ipam-ips: ${EXTERNAL_GATEWAY_ADDRESS}
+  listeners:
+  - name: https
+    protocol: HTTPS
+    port: 443
+    hostname: ${EXTERNAL_DOMAIN}
+    tls:
+      mode: Terminate
+      certificateRefs:
+      - name: external-domain-tls
+    allowedRoutes:
+      namespaces:
+        from: Selector
+        selector:
+          matchLabels:
+            gateway.external/access: 'true'

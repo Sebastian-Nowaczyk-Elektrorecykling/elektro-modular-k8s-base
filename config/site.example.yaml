@@ -1,0 +1,22 @@
+cluster_name: elektro-lan
+repository: https://github.com/Sebastian-Nowaczyk-Elektrorecykling/elektro-modular-k8s-base.git
+branch: main
+lan_cidr: 192.168.10.0/24
+lan_interface_regex: ^(en|eth).*
+api_address: 192.168.10.11
+dns_address: 192.168.10.240
+gateway_address: 192.168.10.241
+external_gateway_address: 192.168.10.242
+dns_upstreams:
+- 1.1.1.1
+- 9.9.9.9
+pod_cidr: 10.42.0.0/16
+service_cidr: 10.43.0.0/16
+cluster_dns: 10.43.0.10
+longhorn_replicas: 3
+postgres_instances: 3
+platform_replicas: 2
+external_domain: apps.example.com
+nodes:
+- name: control-1
+  address: 192.168.10.11

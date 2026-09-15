@@ -1,0 +1,70 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: internal-wildcards
+  namespace: networking
+spec:
+  secretName: internal-wildcards
+  duration: 2160h
+  renewBefore: 720h
+  issuerRef:
+    kind: ClusterIssuer
+    name: internal-ca
+  dnsNames:
+  - internal
+  - '*.internal'
+  - admin.internal
+  - '*.admin.internal'
+  - test.internal
+  - '*.test.internal'
+  - staging.internal
+  - '*.staging.internal'
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: internal
+  namespace: networking
+spec:
+  gatewayClassName: cilium
+  infrastructure:
+    labels:
+      elektro.internal/exposure: lan
+    annotations:
+      io.cilium/lb-ipam-ips: ${GATEWAY_ADDRESS}
+  listeners:
+  - name: http
+    protocol: HTTP
+    port: 80
+    allowedRoutes:
+      namespaces:
+        from: All
+  - name: https
+    protocol: HTTPS
+    port: 443
+    tls:
+      mode: Terminate
+      certificateRefs:
+      - name: internal-wildcards
+    allowedRoutes:
+      namespaces:
+        selector:
+          matchLabels:
+            gateway.internal/access: 'true'
+        from: Selector
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: https-redirect
+  namespace: networking
+spec:
+  parentRefs:
+  - name: internal
+    sectionName: http
+  rules:
+  - filters:
+    - type: RequestRedirect
+      requestRedirect:
+        scheme: https
+        statusCode: 301

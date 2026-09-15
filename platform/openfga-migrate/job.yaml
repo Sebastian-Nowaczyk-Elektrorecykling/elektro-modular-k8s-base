@@ -1,0 +1,36 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: openfga-migrate-1-20-0
+  namespace: identity
+spec:
+  backoffLimit: 5
+  template:
+    metadata:
+      labels:
+        app: openfga-migrate
+    spec:
+      restartPolicy: OnFailure
+      nodeSelector:
+        elektro.internal/workload: 'true'
+      containers:
+      - name: migrate
+        image: openfga/openfga:v1.20.0
+        args:
+        - migrate
+        env:
+        - name: OPENFGA_DATASTORE_ENGINE
+          value: postgres
+        - name: OPENFGA_DATASTORE_URI
+          valueFrom:
+            secretKeyRef:
+              name: openfga-config
+              key: datastore-uri
+        volumeMounts:
+        - name: db-ca
+          mountPath: /db-ca
+          readOnly: true
+      volumes:
+      - name: db-ca
+        secret:
+          secretName: openfga-db-ca

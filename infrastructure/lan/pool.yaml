@@ -1,0 +1,31 @@
+apiVersion: cilium.io/v2
+kind: CiliumLoadBalancerIPPool
+metadata:
+  name: lan
+spec:
+  blocks:
+  - start: ${DNS_ADDRESS}
+    stop: ${DNS_ADDRESS}
+  - start: ${GATEWAY_ADDRESS}
+    stop: ${GATEWAY_ADDRESS}
+  - start: ${EXTERNAL_GATEWAY_ADDRESS}
+    stop: ${EXTERNAL_GATEWAY_ADDRESS}
+  serviceSelector:
+    matchLabels:
+      elektro.internal/exposure: lan
+---
+apiVersion: cilium.io/v2alpha1
+kind: CiliumL2AnnouncementPolicy
+metadata:
+  name: lan
+spec:
+  nodeSelector:
+    matchLabels:
+      elektro.internal/gateway: 'true'
+  serviceSelector:
+    matchLabels:
+      elektro.internal/exposure: lan
+  interfaces:
+  - ${LAN_INTERFACE_REGEX}
+  externalIPs: false
+  loadBalancerIPs: true

@@ -1,0 +1,121 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: inventory
+  namespace: apps
+spec:
+  replicas: ${PLATFORM_REPLICAS}
+  selector:
+    matchLabels:
+      app: inventory
+  template:
+    metadata:
+      labels:
+        app: inventory
+    spec:
+      automountServiceAccountToken: false
+      nodeSelector:
+        elektro.internal/workload: 'true'
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+      - name: inventory
+        image: python:3.13.15-slim-bookworm
+        command:
+        - python
+        - -B
+        - -u
+        - /app/server.py
+        env:
+        - name: FGA_URL
+          value: http://openfga-check.identity.svc.cluster.local:8080
+        envFrom:
+        - secretRef:
+            name: inventory-oidc
+        ports:
+        - containerPort: 8080
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+        volumeMounts:
+        - name: code
+          mountPath: /app
+          readOnly: true
+        - name: trust
+          mountPath: /trust
+          readOnly: true
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            memory: 256Mi
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+      volumes:
+      - name: code
+        configMap:
+          name: inventory-code
+      - name: trust
+        secret:
+          secretName: internal-ca-trust
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: inventory
+  namespace: apps
+spec:
+  selector:
+    app: inventory
+  ports:
+  - name: http
+    port: 8080
+    targetPort: 8080
+---
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: inventory-ingress
+  namespace: apps
+spec:
+  endpointSelector:
+    matchLabels:
+      app: inventory
+  ingress:
+  - fromEntities:
+    - ingress
+    toPorts:
+    - ports:
+      - port: '8080'
+        protocol: TCP
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: inventory
+  namespace: apps
+spec:
+  parentRefs:
+  - name: internal
+    namespace: networking
+    sectionName: https
+  hostnames:
+  - inventory.internal
+  rules:
+  - backendRefs:
+    - name: inventory
+      port: 8080

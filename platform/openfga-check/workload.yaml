@@ -1,0 +1,107 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: openfga-check
+  namespace: identity
+spec:
+  replicas: ${PLATFORM_REPLICAS}
+  selector:
+    matchLabels:
+      app: openfga-check
+  template:
+    metadata:
+      labels:
+        app: openfga-check
+    spec:
+      automountServiceAccountToken: false
+      nodeSelector:
+        elektro.internal/workload: 'true'
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+      - name: openfga-check
+        image: python:3.13.15-slim-bookworm
+        command:
+        - python
+        - -B
+        - -u
+        - /app/check_proxy.py
+        env:
+        - name: FGA_API_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: openfga-config
+              key: api-token
+        envFrom:
+        - secretRef:
+            name: openfga-check-config
+        ports:
+        - containerPort: 8080
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+        volumeMounts:
+        - name: code
+          mountPath: /app
+          readOnly: true
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            memory: 256Mi
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+      volumes:
+      - name: code
+        configMap:
+          name: openfga-check-code
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: openfga-check
+  namespace: identity
+spec:
+  selector:
+    app: openfga-check
+  ports:
+  - name: http
+    port: 8080
+    targetPort: 8080
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: openfga-check
+  namespace: identity
+spec:
+  podSelector:
+    matchLabels:
+      app: openfga-check
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: apps
+      podSelector:
+        matchLabels:
+          app: inventory
+    ports:
+    - port: 8080
+      protocol: TCP

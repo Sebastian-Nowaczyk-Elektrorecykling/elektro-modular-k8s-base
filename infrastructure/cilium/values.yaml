@@ -1,0 +1,32 @@
+kubeProxyReplacement: true
+k8sServiceHost: ${API_ADDRESS}
+k8sServicePort: 6443
+routingMode: tunnel
+tunnelProtocol: vxlan
+ipam:
+  mode: kubernetes
+ipv4NativeRoutingCIDR: ${POD_CIDR}
+autoDirectNodeRoutes: false
+l2announcements:
+  enabled: true
+k8sClientRateLimit:
+  qps: 50
+  burst: 100
+gatewayAPI:
+  enabled: true
+envoy:
+  enabled: true
+operator:
+  replicas: 1
+hubble:
+  relay:
+    enabled: true
+    nodeSelector:
+      elektro.internal/workload: 'true'
+  ui:
+    enabled: true
+    nodeSelector:
+      elektro.internal/workload: 'true'
+encryption:
+  enabled: true
+  type: wireguard

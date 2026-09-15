@@ -1,0 +1,82 @@
+{
+  "schema_version": "1.1",
+  "type_definitions": [
+    {
+      "type": "principal"
+    },
+    {
+      "type": "service",
+      "relations": {
+        "member": {
+          "this": {}
+        },
+        "can_access": {
+          "computedUserset": {
+            "relation": "member"
+          }
+        }
+      },
+      "metadata": {
+        "relations": {
+          "member": {
+            "directly_related_user_types": [
+              {
+                "type": "principal"
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "type": "delegation",
+      "relations": {
+        "delegate": {
+          "this": {}
+        },
+        "target": {
+          "this": {}
+        },
+        "can_act": {
+          "intersection": {
+            "child": [
+              {
+                "computedUserset": {
+                  "relation": "delegate"
+                }
+              },
+              {
+                "tupleToUserset": {
+                  "tupleset": {
+                    "relation": "target"
+                  },
+                  "computedUserset": {
+                    "relation": "can_access"
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      "metadata": {
+        "relations": {
+          "delegate": {
+            "directly_related_user_types": [
+              {
+                "type": "principal"
+              }
+            ]
+          },
+          "target": {
+            "directly_related_user_types": [
+              {
+                "type": "service"
+              }
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+model
+  schema 1.1
+
+type principal
+
+type service
+  relations
+    define member: [principal]
+    define can_access: member
+
+type delegation
+  relations
+    define delegate: [principal]
+    define target: [service]
+    define can_act: delegate and can_access from target

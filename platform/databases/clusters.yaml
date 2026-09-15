@@ -1,0 +1,73 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: authentik-db
+  namespace: identity
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+spec:
+  instances: ${POSTGRES_INSTANCES}
+  imageName: ghcr.io/cloudnative-pg/postgresql:17.11
+  enableSuperuserAccess: false
+  bootstrap:
+    initdb:
+      database: authentik
+      owner: authentik
+      secret:
+        name: authentik-db-app
+  storage:
+    size: 20Gi
+    storageClass: longhorn-postgres
+  affinity:
+    enablePodAntiAffinity: true
+    podAntiAffinityType: required
+    topologyKey: kubernetes.io/hostname
+    nodeSelector:
+      elektro.internal/workload: 'true'
+  resources:
+    requests:
+      cpu: 200m
+      memory: 512Mi
+    limits:
+      memory: 2Gi
+  postgresql:
+    parameters:
+      max_connections: '150'
+      shared_buffers: 256MB
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: openfga-db
+  namespace: identity
+  annotations:
+    kustomize.toolkit.fluxcd.io/prune: disabled
+spec:
+  instances: ${POSTGRES_INSTANCES}
+  imageName: ghcr.io/cloudnative-pg/postgresql:17.11
+  enableSuperuserAccess: false
+  bootstrap:
+    initdb:
+      database: openfga
+      owner: openfga
+      secret:
+        name: openfga-db-app
+  storage:
+    size: 20Gi
+    storageClass: longhorn-postgres
+  affinity:
+    enablePodAntiAffinity: true
+    podAntiAffinityType: required
+    topologyKey: kubernetes.io/hostname
+    nodeSelector:
+      elektro.internal/workload: 'true'
+  resources:
+    requests:
+      cpu: 200m
+      memory: 512Mi
+    limits:
+      memory: 2Gi
+  postgresql:
+    parameters:
+      max_connections: '150'
+      shared_buffers: 256MB

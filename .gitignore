@@ -1,0 +1,10 @@
+.local/
+.venv/
+__pycache__/
+*.pyc
+config/site.yaml
+*.agekey
+*.key
+*.pem
+!**/public-ca.pem
+.DS_Store

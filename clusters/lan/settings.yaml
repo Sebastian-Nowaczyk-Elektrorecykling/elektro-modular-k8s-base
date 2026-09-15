@@ -1,0 +1,22 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cluster-settings
+  namespace: flux-system
+data:
+  CLUSTER_NAME: elektro-lan
+  GIT_URL: https://github.com/Sebastian-Nowaczyk-Elektrorecykling/elektro-modular-k8s-base.git
+  GIT_BRANCH: main
+  LAN_CIDR: 192.168.10.0/24
+  LAN_INTERFACE_REGEX: ^(en|eth).*
+  API_ADDRESS: 192.168.10.11
+  DNS_ADDRESS: 192.168.10.240
+  GATEWAY_ADDRESS: 192.168.10.241
+  EXTERNAL_GATEWAY_ADDRESS: 192.168.10.242
+  POD_CIDR: 10.42.0.0/16
+  SERVICE_CIDR: 10.43.0.0/16
+  LONGHORN_REPLICAS: '3'
+  POSTGRES_INSTANCES: '3'
+  PLATFORM_REPLICAS: '2'
+  EXTERNAL_DOMAIN: apps.example.com
+  DNS_UPSTREAMS: 1.1.1.1 9.9.9.9

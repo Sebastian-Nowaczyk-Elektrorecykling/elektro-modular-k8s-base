@@ -1,0 +1,472 @@
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: namespaces
+  namespace: flux-system
+spec:
+  interval: 5m
+  retryInterval: 1m
+  timeout: 20m
+  path: ./infrastructure/namespaces
+  prune: true
+  wait: false
+  sourceRef:
+    kind: GitRepository
+    name: cluster
+  postBuild:
+    substituteFrom:
+    - kind: ConfigMap
+      name: cluster-settings
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: sources
+  namespace: flux-system
+spec:
+  interval: 5m
+  retryInterval: 1m
+  timeout: 20m
+  path: ./infrastructure/sources
+  prune: true
+  wait: false
+  sourceRef:
+    kind: GitRepository
+    name: cluster
+  postBuild:
+    substituteFrom:
+    - kind: ConfigMap
+      name: cluster-settings
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: gateway-api
+  namespace: flux-system
+spec:
+  interval: 5m
+  retryInterval: 1m
+  timeout: 20m
+  path: ./infrastructure/gateway-api
+  prune: false
+  wait: true
+  sourceRef:
+    kind: GitRepository
+    name: cluster
+  postBuild:
+    substituteFrom:
+    - kind: ConfigMap
+      name: cluster-settings
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: cilium
+  namespace: flux-system
+spec:
+  interval: 5m
+  retryInterval: 1m
+  timeout: 20m
+  path: ./infrastructure/cilium
+  prune: false
+  wait: true
+  sourceRef:
+    kind: GitRepository
+    name: cluster
+  postBuild:
+    substituteFrom:
+    - kind: ConfigMap
+      name: cluster-settings
+  dependsOn:
+  - name: sources
+  - name: gateway-api
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: lan
+  namespace: flux-system
+spec:
+  interval: 5m
+  retryInterval: 1m
+  timeout: 20m
+  path: ./infrastructure/lan
+  prune: true
+  wait: false
+  sourceRef:
+    kind: GitRepository
+    name: cluster
+  postBuild:
+    substituteFrom:
+    - kind: ConfigMap
+      name: cluster-settings
+  dependsOn:
+  - name: cilium
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: dns
+  namespace: flux-system
+spec:
+  interval: 5m
+  retryInterval: 1m
+  timeout: 20m
+  path: ./infrastructure/dns
+  prune: true
+  wait: true
+  sourceRef:
+    kind: GitRepository
+    name: cluster
+  postBuild:
+    substituteFrom:
+    - kind: ConfigMap
+      name: cluster-settings
+  dependsOn:
+  - name: lan
+  - name: namespaces
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: longhorn
+  namespace: flux-system
+spec:
+  interval: 5m
+  retryInterval: 1m
+  timeout: 20m
+  path: ./infrastructure/longhorn
+  prune: false
+  wait: true
+  sourceRef:
+    kind: GitRepository
+    name: cluster
+  postBuild:
+    substituteFrom:
+    - kind: ConfigMap
+      name: cluster-settings
+  dependsOn:
+  - name: cilium
+  - name: sources
+  - name: namespaces
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: storage-classes
+  namespace: flux-system
+spec:
+  interval: 5m
+  retryInterval: 1m
+  timeout: 20m
+  path: ./infrastructure/storage-classes
+  prune: true
+  wait: false
+  sourceRef:
+    kind: GitRepository
+    name: cluster
+  postBuild:
+    substituteFrom:
+    - kind: ConfigMap
+      name: cluster-settings
+  dependsOn:
+  - name: longhorn
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: cnpg
+  namespace: flux-system
+spec:
+  interval: 5m
+  retryInterval: 1m
+  timeout: 20m
+  path: ./infrastructure/cnpg
+  prune: false
+  wait: true
+  sourceRef:
+    kind: GitRepository
+    name: cluster
+  postBuild:
+    substituteFrom:
+    - kind: ConfigMap
+      name: cluster-settings
+  dependsOn:
+  - name: cilium
+  - name: sources
+  - name: namespaces
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: cert-manager
+  namespace: flux-system
+spec:
+  interval: 5m
+  retryInterval: 1m
+  timeout: 20m
+  path: ./infrastructure/cert-manager
+  prune: true
+  wait: true
+  sourceRef:
+    kind: GitRepository
+    name: cluster
+  postBuild:
+    substituteFrom:
+    - kind: ConfigMap
+      name: cluster-settings
+  dependsOn:
+  - name: cilium
+  - name: sources
+  - name: namespaces
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: pki
+  namespace: flux-system
+spec:
+  interval: 5m
+  retryInterval: 1m
+  timeout: 20m
+  path: ./infrastructure/pki
+  prune: false
+  wait: true
+  sourceRef:
+    kind: GitRepository
+    name: cluster
+  postBuild:
+    substituteFrom:
+    - kind: ConfigMap
+      name: cluster-settings
+  dependsOn:
+  - name: cert-manager
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: gateways
+  namespace: flux-system
+spec:
+  interval: 5m
+  retryInterval: 1m
+  timeout: 20m
+  path: ./infrastructure/gateways
+  prune: true
+  wait: true
+  sourceRef:
+    kind: GitRepository
+    name: cluster
+  postBuild:
+    substituteFrom:
+    - kind: ConfigMap
+      name: cluster-settings
+  dependsOn:
+  - name: lan
+  - name: pki
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: databases
+  namespace: flux-system
+spec:
+  interval: 5m
+  retryInterval: 1m
+  timeout: 20m
+  path: ./platform/databases
+  prune: false
+  wait: true
+  sourceRef:
+    kind: GitRepository
+    name: cluster
+  postBuild:
+    substituteFrom:
+    - kind: ConfigMap
+      name: cluster-settings
+  dependsOn:
+  - name: cnpg
+  - name: storage-classes
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: openfga-migrate
+  namespace: flux-system
+spec:
+  interval: 5m
+  retryInterval: 1m
+  timeout: 20m
+  path: ./platform/openfga-migrate
+  prune: false
+  wait: true
+  sourceRef:
+    kind: GitRepository
+    name: cluster
+  postBuild:
+    substituteFrom:
+    - kind: ConfigMap
+      name: cluster-settings
+  dependsOn:
+  - name: databases
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: openfga
+  namespace: flux-system
+spec:
+  interval: 5m
+  retryInterval: 1m
+  timeout: 20m
+  path: ./platform/openfga
+  prune: true
+  wait: true
+  sourceRef:
+    kind: GitRepository
+    name: cluster
+  postBuild:
+    substituteFrom:
+    - kind: ConfigMap
+      name: cluster-settings
+  dependsOn:
+  - name: openfga-migrate
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: identity-config
+  namespace: flux-system
+spec:
+  interval: 5m
+  retryInterval: 1m
+  timeout: 20m
+  path: ./platform/identity-config
+  prune: true
+  wait: false
+  sourceRef:
+    kind: GitRepository
+    name: cluster
+  postBuild:
+    substituteFrom:
+    - kind: ConfigMap
+      name: cluster-settings
+  dependsOn:
+  - name: namespaces
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: authentik
+  namespace: flux-system
+spec:
+  interval: 5m
+  retryInterval: 1m
+  timeout: 20m
+  path: ./platform/authentik
+  prune: true
+  wait: true
+  sourceRef:
+    kind: GitRepository
+    name: cluster
+  postBuild:
+    substituteFrom:
+    - kind: ConfigMap
+      name: cluster-settings
+  dependsOn:
+  - name: databases
+  - name: gateways
+  - name: dns
+  - name: identity-config
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: dashboard-policy
+  namespace: flux-system
+spec:
+  interval: 5m
+  retryInterval: 1m
+  timeout: 20m
+  path: ./platform/dashboard-policy
+  prune: true
+  wait: false
+  sourceRef:
+    kind: GitRepository
+    name: cluster
+  postBuild:
+    substituteFrom:
+    - kind: ConfigMap
+      name: cluster-settings
+  dependsOn:
+  - name: authentik
+  - name: longhorn
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: app-policies
+  namespace: flux-system
+spec:
+  interval: 5m
+  retryInterval: 1m
+  timeout: 10m
+  path: ./apps/namespaces
+  prune: true
+  wait: true
+  dependsOn:
+  - name: namespaces
+  - name: cilium
+  sourceRef:
+    kind: GitRepository
+    name: cluster
+  postBuild:
+    substituteFrom:
+    - kind: ConfigMap
+      name: cluster-settings
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: openfga-check
+  namespace: flux-system
+spec:
+  interval: 5m
+  retryInterval: 1m
+  timeout: 10m
+  path: ./platform/openfga-check
+  prune: true
+  wait: true
+  dependsOn:
+  - name: openfga
+  sourceRef:
+    kind: GitRepository
+    name: cluster
+  postBuild:
+    substituteFrom:
+    - kind: ConfigMap
+      name: cluster-settings
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: inventory
+  namespace: flux-system
+spec:
+  interval: 5m
+  retryInterval: 1m
+  timeout: 10m
+  path: ./apps/inventory
+  prune: true
+  wait: true
+  dependsOn:
+  - name: authentik
+  - name: openfga-check
+  - name: app-policies
+  sourceRef:
+    kind: GitRepository
+    name: cluster
+  postBuild:
+    substituteFrom:
+    - kind: ConfigMap
+      name: cluster-settings

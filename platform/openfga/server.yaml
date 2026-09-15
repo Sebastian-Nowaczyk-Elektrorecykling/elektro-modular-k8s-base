@@ -1,0 +1,101 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: openfga
+  namespace: identity
+spec:
+  replicas: ${PLATFORM_REPLICAS}
+  selector:
+    matchLabels:
+      app: openfga
+  template:
+    metadata:
+      labels:
+        app: openfga
+    spec:
+      nodeSelector:
+        elektro.internal/workload: 'true'
+      containers:
+      - name: openfga
+        image: openfga/openfga:v1.20.0
+        args:
+        - run
+        env:
+        - name: OPENFGA_DATASTORE_ENGINE
+          value: postgres
+        - name: OPENFGA_DATASTORE_URI
+          valueFrom:
+            secretKeyRef:
+              name: openfga-config
+              key: datastore-uri
+        - name: OPENFGA_AUTHN_METHOD
+          value: preshared
+        - name: OPENFGA_AUTHN_PRESHARED_KEYS
+          valueFrom:
+            secretKeyRef:
+              name: openfga-config
+              key: api-token
+        - name: OPENFGA_PLAYGROUND_ENABLED
+          value: 'false'
+        - name: OPENFGA_LOG_FORMAT
+          value: json
+        ports:
+        - containerPort: 8080
+          name: http
+        - containerPort: 8081
+          name: grpc
+        readinessProbe:
+          grpc:
+            port: 8081
+          initialDelaySeconds: 5
+        livenessProbe:
+          grpc:
+            port: 8081
+          initialDelaySeconds: 15
+        volumeMounts:
+        - name: db-ca
+          mountPath: /db-ca
+          readOnly: true
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            memory: 512Mi
+      volumes:
+      - name: db-ca
+        secret:
+          secretName: openfga-db-ca
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: openfga
+  namespace: identity
+spec:
+  selector:
+    app: openfga
+  ports:
+  - name: http
+    port: 8080
+    targetPort: 8080
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: openfga
+  namespace: identity
+spec:
+  podSelector:
+    matchLabels:
+      app: openfga
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: identity
+    ports:
+    - port: 8080
+      protocol: TCP
