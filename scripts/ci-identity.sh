@@ -9,9 +9,18 @@ from pathlib import Path
 Path('.local/ci.env').write_text('AUTHENTIK_SECRET_KEY='+secrets.token_hex(48)+'\n'+
     'AUTHENTIK_POSTGRESQL__HOST=ci-postgres\nAUTHENTIK_POSTGRESQL__NAME=authentik\n'+
     'AUTHENTIK_POSTGRESQL__USER=postgres\nAUTHENTIK_POSTGRESQL__PASSWORD='+secrets.token_hex(32)+'\n'+
-    'AUTHENTIK_BOOTSTRAP_PASSWORD='+secrets.token_urlsafe(32)+'\nAUTHENTIK_BOOTSTRAP_EMAIL=ci@example.invalid\n')
+    'AUTHENTIK_BOOTSTRAP_PASSWORD='+secrets.token_urlsafe(32)+'\nAUTHENTIK_BOOTSTRAP_EMAIL=ci@example.invalid\nAUTHENTIK_LOG_LEVEL=warning\n')
 PY
-cleanup() { docker rm -f ci-server ci-worker ci-postgres ci-fga >/dev/null 2>&1 || true; docker network rm elektro-ci >/dev/null 2>&1 || true; }
+cleanup() {
+    local status=$?
+    if ((status != 0)); then
+        # Only ephemeral CI containers; preserve errors before deleting them.
+        docker logs --tail 100 ci-server 2>&1 | python3 tests/ci_diagnostics.py >&2 || true
+        docker logs --tail 100 ci-worker 2>&1 | python3 tests/ci_diagnostics.py >&2 || true
+    fi
+    docker rm -f ci-server ci-worker ci-postgres ci-fga >/dev/null 2>&1 || true
+    docker network rm elektro-ci >/dev/null 2>&1 || true
+}
 trap cleanup EXIT
 docker network create elektro-ci >/dev/null
 python3 - <<'PY'
